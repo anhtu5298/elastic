@@ -1,0 +1,188 @@
+Step 1
+  [1-1] Configure /etc/hosts file
+    For this example our node1 has a browser installed, so kibana.local will allow access to the Kibana web page.
+
+    # /etc/hosts file for [node1] (we need kibana.local and logstash.local)
+    127.0.0.1 kibana.local logstash.local
+    192.168.0.2 node1.elastic.test.com node1
+    192.168.0.3 node2.elastic.test.com node2# /etc/hosts file for [node2] (we don't need kibana.local and logstash.local here)
+    192.168.0.2 node1.elastic.test.com node1
+    192.168.0.3 node2.elastic.test.com node2
+Step 2. Create SSL certificates and enable TLS for Elasticsearch on node1
+  [2-1] Set environment variables (adapt these variables path depending on where and how Elasticsearch was downloaded)
+    [root@node1 ~]# ES_HOME=/usr/share/elasticsearch
+    [root@node1 ~]# ES_PATH_CONF=/etc/elasticsearch
+  [2-2] Create tmp folder
+    [root@node1 ~]# mkdir tmp
+    [root@node1 ~]# cd tmp/
+    [root@node1 tmp]# mkdir cert_blog
+  [2-3] Create instance yaml file
+    [root@node1 cert_blog]# vi ~/tmp/cert_blog/instance.yml
+    # add the instance information to yml file
+    instances:
+      - name: 'node1'
+        dns: [ 'node1.elastic.test.com' ]
+      - name: "node2"
+        dns: [ 'node2.elastic.test.com' ]
+      - name: 'my-kibana'
+        dns: [ 'kibana.local' ]
+      - name: 'logstash'
+        dns: [ 'logstash.local' ]
+  [2-4] Generate CA and server certificates (once Elasticsearch is installed)
+    [root@node1 tmp]# cd $ES_HOME
+    [root@node1 elasticsearch]# bin/elasticsearch-certutil cert --keep-ca-key --pem --in ~/tmp/cert_blog/instance.yml --out ~/tmp/cert_blog/certs.zip
+  [2-5] Unzip the certificates
+    [root@node1 elasticsearch]# cd ~/tmp/cert_blog
+    [root@node1 cert_blog]# unzip certs.zip -d ./certs
+   [2-6] Elasticsearch TLS setup
+  [2-6-1] Copy cert file to config folder
+    [root@node1 ~]# cd $ES_PATH_CONF
+    [root@node1 elasticsearch]# pwd
+    /etc/elasticsearch
+    [root@node1 elasticsearch]# mkdir certs
+    [root@node1 elasticsearch]# cp ~/tmp/cert_blog/certs/ca/ca* ~/tmp/cert_blog/certs/node1/* certs
+    [root@node1 elasticsearch]# ll certs
+    total 12
+    -rw-r--r--. 1 root elasticsearch 1834 Apr 12 08:47 ca.crt
+    -rw-r--r--. 1 root elasticsearch 1834 Apr 12 08:47 ca.key
+    -rw-r--r--. 1 root elasticsearch 1509 Apr 12 08:47 node1.crt
+    -rw-r--r--. 1 root elasticsearch 1679 Apr 12 08:47 node1.key
+    [root@node1 elasticsearch]#
+  [2-6-2] Configure elasticsearch.yml
+    [root@node1 elasticsearch]# vi elasticsearch.yml 
+    ## add the following contents
+    node.name: node1
+    network.host: node1.elastic.test.com
+    xpack.security.enabled: true
+    xpack.security.http.ssl.enabled: true
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.http.ssl.key: certs/node1.key
+    xpack.security.http.ssl.certificate: certs/node1.crt
+    xpack.security.http.ssl.certificate_authorities: certs/ca.crt
+    xpack.security.transport.ssl.key: certs/node1.key
+    xpack.security.transport.ssl.certificate: certs/node1.crt
+    xpack.security.transport.ssl.certificate_authorities: certs/ca.crt
+    discovery.seed_hosts: [ "node1.elastic.test.com" ]
+    cluster.initial_master_nodes: [ "node1" ]
+   [2-6-3] Start and check cluster log
+    [root@node1 elasticsearch]# grep '\[node1\] started' /var/log/elasticsearch/elasticsearch.log 
+    [o.e.n.Node               ] [node1] started
+  [2-6-4] Set built-in user password
+    [root@node1 elasticsearch]# cd $ES_HOME
+    [root@node1 elasticsearch]# bin/elasticsearch-setup-passwords auto -u "https://node1.elastic.test.com:9200"
+    Initiating the setup of passwords for reserved users elastic,apm_system,kibana,logstash_system,beats_system,remote_monitoring_user.
+    The passwords will be randomly generated and printed to the console.
+    Please confirm that you would like to continue [y/N] y
+    Changed password for user apm_system
+    PASSWORD apm_system = <apm_system_password>
+    Changed password for user kibana
+    PASSWORD kibana = <kibana_password>
+    Changed password for user logstash_system
+    PASSWORD logstash_system = <logstash_system_password>
+    Changed password for user beats_system
+    PASSWORD beats_system = <beats_system_password>
+    Changed password for user remote_monitoring_user
+    PASSWORD remote_monitoring_user = <remote_monitoring_user_password>
+    Changed password for user elastic
+    PASSWORD elastic = <elastic_password>
+Step 3. Enable TLS for Kibana on node1
+  [3-1] Set environment variables
+    Adapt these variable paths depending on where and how Kibana was downloaded:
+
+    [root@node1 ~]# KIBANA_HOME=/usr/share/kibana
+    [root@node1 ~]# KIBANA_PATH_CONFIG=/etc/kibana
+  [3-2] Create config and config/certs folder and copy certs (once Kibana is installed)
+    Copy the certification files created previously in step 2-4 and paste on kibana/config/certs.
+
+    [root@node1 kibana]# ls config/certs
+    total 12
+    ca.crt
+    my-kibana.crt
+    my-kibana.key
+  [3-3] Configure kibana.yml
+    Remember to use the password generated for the built-in user above. You need to replace <kibana_password> with the password that was defined in step 2-6-4.
+
+    [root@node1 kibana]# vi kibana.yml 
+    server.name: "my-kibana"
+    server.host: "kibana.local"
+    server.ssl.enabled: true
+    server.ssl.certificate: /etc/kibana/config/certs/my-kibana.crt
+    server.ssl.key: /etc/kibana/config/certs/my-kibana.key
+    elasticsearch.hosts: ["https://node1.elastic.test.com:9200"]
+    elasticsearch.username: "kibana"
+    elasticsearch.password: "<kibana_password>"
+    elasticsearch.ssl.certificateAuthorities: [ "/etc/kibana/config/certs/ca.crt" ]
+Step 4. Enable TLS for Elasticsearch on node2
+  [4-1] Set environment variables
+    [root@node2 ~]# ES_HOME=/usr/share/elasticsearch
+    [root@node2 ~]# ES_PATH_CONF=/etc/elasticsearch
+  [4-2] Set up TLS on node2
+    You can use the scp command to copy certificates from node1 to node2. Both nodes require the certificate and key in order to secure the connection. In a Production environment, it is recommended to use a properly signed key for each node. For demonstration purposes, we are using an automatically generated CA certificate and multi-DNS hostname certificate signed by our generated CA.
+
+    [root@node2 ~]# cd $ES_PATH_CONF
+    [root@node2 elasticsearch]# pwd
+    /etc/elasticsearch
+    [root@node2 elasticsearch]# mkdir certs
+    [root@node2 elasticsearch]# cp ~/tmp/cert_blog/certs/ca/ca.crt ~/tmp/cert_blog/certs/node2/* certs  
+    [root@node2 elasticsearch]# 
+    [root@node2 elasticsearch]# ll certs
+    total 12
+    -rw-r--r--. 1 root elasticsearch 1834 Apr 12 10:55 ca.crt
+    -rw-r--r--. 1 root elasticsearch 1509 Apr 12 10:55 node2.crt
+    -rw-r--r--. 1 root elasticsearch 1675 Apr 12 10:55 node2.key
+  [4-3] Configure elasticsearch.yml
+    [root@node2 elasticsearch]# vi elasticsearch.yml 
+    node.name: node2
+    network.host: node2.elastic.test.com
+    xpack.security.enabled: true
+    xpack.security.http.ssl.enabled: true
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.http.ssl.key: certs/node2.key
+    xpack.security.http.ssl.certificate: certs/node2.crt
+    xpack.security.http.ssl.certificate_authorities: certs/ca.crt
+    xpack.security.transport.ssl.key: certs/node2.key
+    xpack.security.transport.ssl.certificate: certs/node2.crt
+    xpack.security.transport.ssl.certificate_authorities: certs/ca.crt
+    discovery.seed_hosts: [ "node1.elastic.test.com" ]
+Step 6. Enable TLS for Logstash on node1
+  [6-1] Create folder and copy certificates
+    [root@node1 logstash]# ls -l
+    total 24
+    ca.crt
+    logstash.crt
+    logstash.key
+  [6-2] Convert logstash.key to PKCS#8 format for Beats input plugin
+    [root@node1 logstash]# openssl pkcs8 -in config/certs/logstash.key -topk8 -nocrypt -out config/certs/logstash.pkcs8.key
+  [6-3] Configure logstash.yml
+    Remember to use the auto-generated password for logstash_system user. Use the password defined in step 2-6-4.
+
+    [root@node1 logstash]# vi logstash.yml
+    Then edit:
+
+    node.name: logstash.local
+    path.config: /etc/logstash/conf.d/*.conf
+    xpack.monitoring.enabled: true
+    xpack.monitoring.elasticsearch.username: logstash_system
+    xpack.monitoring.elasticsearch.password: '<logstash_system_password>'
+    xpack.monitoring.elasticsearch.hosts: [ 'https://node1.elastic.test.com:9200' ]
+    xpack.monitoring.elasticsearch.ssl.certificate_authority: /etc/logstash/config/certs/ca.crt
+  [6-4] Create and configure conf.d/example.conf
+    On the Elasticsearch output use the password defined in step 5-2.
+
+    [root@node1 logstash]# vi conf.d/example.conf 
+    input {
+      beats {
+        port => 5044
+        ssl => true
+        ssl_key => '/etc/logstash/config/certs/logstash.pkcs8.key'
+        ssl_certificate => '/etc/logstash/config/certs/logstash.crt'
+      }
+    }
+    output {
+      elasticsearch {
+        hosts => ["https://node1.elastic.test.com:9200","https://node2.elastic.test.com:9200"]
+        cacert => '/etc/logstash/config/certs/ca.crt'
+        user => 'logstash_writer'
+        password => <logstash_writer_password>
+      }
+    }
