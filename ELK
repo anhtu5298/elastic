@@ -1,0 +1,27 @@
+##require environment##
+##install JAVA V8+
+$yum install java-1.8.0-openjdk.x86_64
+
+##install library
+$cd /etc/yum.repos.d/
+$vi elastic.repo
+[elasticsearch]
+name=Elasticsearch repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=0
+autorefresh=1
+type=rpm-md
+##save config
+
+##install ELK
+$yum update
+$yum install --enbalerepo=elasticsearch [name of element]
+##Config elasticsearch
+$vi /etc/elasticsearch/elasticsearch.yml
+##Config kibana
+$vi /etc/kibana/kibana.yml
+##Config logstahs
+$cd /etc/logstash/
+
