@@ -186,3 +186,43 @@ Step 6. Enable TLS for Logstash on node1
         password => <logstash_writer_password>
       }
     }
+Step 7. Run Filebeat and set up TLS on node1
+  [7-1] Create a config folder and copy certificates
+    [root@node1 filebeat]# mkdir config
+    [root@node1 filebeat]# mkdir config/certs
+    [root@node1 filebeat]# cp ~/tmp/cert_blog/certs/ca/ca.crt config/certs
+    [root@node1 filebeat]# ll config/certs/
+    total 4
+    -rw-r--r--. 1 root root 1834 Apr 20 00:18 ca.crt
+  [7-2] Create a new filebeat.yml
+    [root@node1 filebeat]# pwd
+    /etc/filebeat
+    [root@node1 filebeat]# mv filebeat.yml filebeat.yml.old
+  [7-3] Edit your new configuration file filebeat.yml
+    filebeat.inputs:
+    - type: log
+      paths:
+        - /etc/filebeat/logstash-tutorial-dataset
+    output.logstash:
+      hosts: ["logstash.local:5044"]
+      ssl.certificate_authorities:
+        - /etc/filebeat/config/certs/ca.crt
+Step 8. Use Filebeat to ingest data
+  [8-1] Prepare input log data (logstash-tutorial.log) for Filebeat
+    First, download the input log data.
+
+    [root@node1 filebeat]# pwd
+    /etc/filebeat
+    [root@node1 filebeat]# mkdir logstash-tutorial-dataset
+    [root@node1 filebeat]# cp /root/logstash-tutorial.log logstash-tutorial-dataset/.
+    [root@node1 filebeat]# ll logstash-tutorial-dataset/
+    total 24
+    -rwxr-x---. 1 root root 24464 Apr 20 00:29 logstash-tutorial.log
+  [8-2] Start Filebeat
+    [root@node1 filebeat]# systemctl start filebeat
+    [root@node1 filebeat]# systemctl enable filebeat
+    Created symlink from /etc/systemd/system/multi-user.target.wants/filebeat.service to /usr/lib/systemd/system/filebeat.service.
+  [8-3] Check the log
+    We should see the following log messages:
+
+    INFO    log/harvester.go:216    Harvester started for file: /etc/filebeat/logstash-tutorial-dataset/logstash-tutorial.log
