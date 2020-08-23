@@ -1,0 +1,14 @@
+input{
+        tcp{
+                port => 514
+        }
+        udp{
+                port => 514
+        }
+}
+output{
+        elasticsearch{
+                host => ["http://es.anhtu:9200"]
+                index => "anhtu-%{+YYYY.MM.dd}"
+        }
+}
