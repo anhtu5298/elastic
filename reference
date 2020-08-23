@@ -2,3 +2,5 @@
 https://www.elastic.co/guide/en/elasticsearch/reference/7.9/rpm.html#rpm-repo
 ##Config
 https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-elasticsearch-on-centos-7#:~:text=How%20To%20Install%20and%20Configure%20Elasticsearch%20on%20CentOS,is%20time%20to%20configure%20Elasticsearch.%20More%20items...%20
+##Security
+https://www.elastic.co/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash
