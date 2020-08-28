@@ -17,7 +17,7 @@ type=rpm-md
 
 ##install ELK
 $yum update
-$yum install --enbalerepo=elasticsearch [name of element]
+$yum install --enablerepo=elasticsearch [name of element]
 ##Config elasticsearch
 $vi /etc/elasticsearch/elasticsearch.yml
 ##Config kibana
