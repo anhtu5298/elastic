@@ -20,8 +20,32 @@ $yum update
 $yum install --enablerepo=elasticsearch [name of element]
 ##Config elasticsearch
 $vi /etc/elasticsearch/elasticsearch.yml
+**jvm.options
+  -Xms1g
+  -Xmx1g
+  Heap space: phan bo nho cap cho tien trinh java
+  *suggest de 2/3 tong dung luong ram cua host*
 ##Config kibana
 $vi /etc/kibana/kibana.yml
 ##Config logstahs
 $cd /etc/logstash/
+**jvm.options
+  -Xms1g
+  -Xmx1g
+  Heap space: phan bo nho cap cho tien trinh java
+  *suggest de 20% tong dung luong ram cua host*
+##Path run
+#Logstash
+$/usr/share/logstash/bin/logstash
+#Elasticsearch
+$/usr/share/elasticsearch/bin/elasticsearch
+#Kibana
+$/usr/share/kibana/bin/kibana
 
+********************Setup offline*********************************
+##Truy cap trang chu "https://elastic.co/downloads/[ten thanh phan]"
+#Download file RPM
+**NOTE: RPM: cho ho Centos, Redhat
+        DEB: cho ho Debian
+$rpm -ivh [path file]
+$rpm -ivh [link download file]
