@@ -1,0 +1,20 @@
+###Log có format dạng
+  <field1>:<value1>|<field2>:<value2>|<field3>:<value3>|<field4>:<value4>|<field5>:<value5>
+  Ta có thể sử dụng "kv" filter plugin
+  ##Mặc định "kv" sẽ cắt các log có dạng <field1>=<value1>:blank:<field2>=<value2>
+  Cấu trúc kv:
+    kv{
+      allow_duplicate_values => false  //Cho phép 1 trường có 2 giá trị
+      field_split => "\|"              // cắt dữ liệu khi gặp ký tự "|"
+      value_split => ":"              // phân biệt trường với dữ liệu khi gặp ":"
+    }
+### trong trường hợp log chưa có cấu trúc cố định, ta có thể dùng "grok" plugin để lọc log cho đến khi có cấu trúc
+  grok{
+    match => ["field", "grok 1, grok 2, ... , grok n"]
+  }
+### trong trường hợp log không có cấu trúc cố định, ta có thể kết hợp dùng thêm "mutate"."gsub" filter plugin
+  mutate{
+     gsub => {
+      "<field_name>", "<giá trị cần thay thế>", "giá trị thay thế"
+     }
+  }
