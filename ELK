@@ -2,7 +2,7 @@
 ##install JAVA V8+
 $yum install java-1.8.0-openjdk.x86_64
 
-##install library
+##install repo
 $cd /etc/yum.repos.d/
 $vi elastic.repo
 [elasticsearch]
